@@ -11,7 +11,7 @@ import SwiftUI
 struct BPlayerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MusicPlayerView()
         }
     }
 }

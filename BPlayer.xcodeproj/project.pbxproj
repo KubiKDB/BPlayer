@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3814B7142D0F1C41002A4756 /* music_library in Resources */ = {isa = PBXBuildFile; fileRef = 3814B7132D0F1C41002A4756 /* music_library */; };
 		3863CF262D0EDE3500881F87 /* BPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3863CF252D0EDE3500881F87 /* BPlayerApp.swift */; };
 		3863CF282D0EDE3500881F87 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3863CF272D0EDE3500881F87 /* ContentView.swift */; };
 		3863CF2A2D0EDE3600881F87 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3863CF292D0EDE3600881F87 /* Assets.xcassets */; };
@@ -14,11 +15,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3814B7132D0F1C41002A4756 /* music_library */ = {isa = PBXFileReference; lastKnownFileType = folder; path = music_library; sourceTree = "<group>"; };
 		3863CF222D0EDE3500881F87 /* BPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3863CF252D0EDE3500881F87 /* BPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BPlayerApp.swift; sourceTree = "<group>"; };
 		3863CF272D0EDE3500881F87 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3863CF292D0EDE3600881F87 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3863CF2C2D0EDE3600881F87 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		38785C172D100DD900D1F7B2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +54,8 @@
 		3863CF242D0EDE3500881F87 /* BPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				38785C172D100DD900D1F7B2 /* Info.plist */,
+				3814B7132D0F1C41002A4756 /* music_library */,
 				3863CF252D0EDE3500881F87 /* BPlayerApp.swift */,
 				3863CF272D0EDE3500881F87 /* ContentView.swift */,
 				3863CF292D0EDE3600881F87 /* Assets.xcassets */,
@@ -126,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3863CF2D2D0EDE3600881F87 /* Preview Assets.xcassets in Resources */,
+				3814B7142D0F1C41002A4756 /* music_library in Resources */,
 				3863CF2A2D0EDE3600881F87 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,11 +275,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BPlayer/Preview Content\"";
+				DEVELOPMENT_TEAM = WJ8R7FHAJ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BPlayer/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -286,6 +295,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.daniel.BPlayer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -300,8 +310,11 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BPlayer/Preview Content\"";
+				DEVELOPMENT_TEAM = WJ8R7FHAJ8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "<key>NSDocumentDirectoryUsageDescription</key>\n<string>Need access to documents</string>\n<key>NSDownloadsDirectoryUsageDescription</key>\n<string>Need access to downloads</string>\n<key>UIFileSharingEnabled</key>\n<true/>\n<key>LSSupportsOpeningDocumentsInPlace</key>\n<true/>\n";
+				"INFOPLIST_FILE[sdk=*]" = "<key>NSDocumentDirectoryUsageDescription</key>\n<string>Need access to documents</string>\n<key>NSDownloadsDirectoryUsageDescription</key>\n<string>Need access to downloads</string>\n<key>UIFileSharingEnabled</key>\n<true/>\n<key>LSSupportsOpeningDocumentsInPlace</key>\n<true/>\n";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
