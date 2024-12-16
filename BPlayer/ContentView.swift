@@ -12,7 +12,8 @@ struct MusicPlayerView: View {
     @State private var currentTime: TimeInterval = 0
     @State private var trackDuration: TimeInterval = 0
     @State private var directoryPath = "/music_library/"
-
+    @State private var is_shuffling = false
+    
     var body: some View {
         VStack(spacing: 40) {
             List(trackFiles, id: \ .self) { track in
@@ -72,7 +73,7 @@ struct MusicPlayerView: View {
                     Image(systemName: "shuffle")
                         .resizable()
                         .frame(width: 30, height: 30)
-                        .foregroundColor(.white)
+                        .foregroundColor(is_shuffling ? .blue : .white)
                 }
                 Spacer()
             }
@@ -84,11 +85,13 @@ struct MusicPlayerView: View {
             configureAudioSession()
             setupRemoteCommands()
             loadTracksFromDirectory()
+            trackFiles.sort()
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-                    guard let player = audioPlayer, player.isPlaying else { return }
-                    currentTime = player.currentTime
-                }
+            guard let player = audioPlayer, player.isPlaying else { return }
+            currentTime = player.currentTime
+            checkForTrackEnd()
+        }
     }
     
     func listFilesInDirectory(directoryName: String) -> [String]{
@@ -199,14 +202,24 @@ struct MusicPlayerView: View {
 
     private func shuffleTapped() {
         guard !trackFiles.isEmpty else { return }
-
-        currentTrackIndex = Int.random(in: 0..<trackFiles.count)
+        
+        is_shuffling = !is_shuffling
+        
+        if is_shuffling {
+            trackFiles.shuffle()
+        }else{
+            trackFiles.sort()
+        }
+        
+        currentTrackIndex = 0
+//        currentTrackIndex = Int.random(in: 0..<trackFiles.count)
         playTrack(at: currentTrackIndex)
     }
     
     private func sliderEditingChanged(editing: Bool) {
         if !editing, let player = audioPlayer {
             player.currentTime = currentTime
+            setupNowPlayingInfo()
         }
     }
 
@@ -223,6 +236,13 @@ struct MusicPlayerView: View {
             try audioSession.setActive(true)
         } catch {
             print("Failed to set up audio session: \(error.localizedDescription)")
+        }
+    }
+    
+    private func checkForTrackEnd() {
+        guard let player = audioPlayer else { return }
+        if player.currentTime >= player.duration - 0.5{
+            nextTapped()
         }
     }
 
