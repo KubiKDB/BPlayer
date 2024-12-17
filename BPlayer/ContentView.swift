@@ -15,7 +15,7 @@ struct MusicPlayerView: View {
     @State private var is_shuffling = false
     
     var body: some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 0) {
             List(trackFiles, id: \ .self) { track in
                 Button(action: {
                     if let index = trackFiles.firstIndex(of: track) {
@@ -26,61 +26,72 @@ struct MusicPlayerView: View {
                     Text(track)
                         .foregroundColor(.white)
                 }
-            }.background(Color(.darkGray).edgesIgnoringSafeArea(.all))
+            }
+            .padding(.top, 1)
             
-            Text(nowPlaying)
-                .font(.title2)
-                .multilineTextAlignment(.center)
-                .padding()
-                .foregroundColor(.white)
-
-            VStack(spacing: 10) {
-                            Slider(value: $currentTime, in: 0...trackDuration, onEditingChanged: sliderEditingChanged)
-                                .accentColor(.white)
-                            HStack {
-                                Text(formatTime(currentTime))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(formatTime(trackDuration))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .padding()
-
-            HStack(spacing: 60) {
+            
+            VStack() {
                 Spacer()
-                Button(action: previousTapped) {
-                    Image(systemName: "backward.fill")
-                        .resizable()
-                        .frame(width: 40, height: 30)
-                        .foregroundColor(.white)
-                }
+                
+                Text(nowPlaying)
+                    .font(.title2)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .foregroundColor(.white)
+                
+                Spacer()
 
-                Button(action: playPauseTapped) {
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .resizable()
-                        .frame(width: 40, height: 40)
-                        .foregroundColor(.white)
+                VStack(spacing: 8) {
+                    Slider(value: $currentTime, in: 0...trackDuration, onEditingChanged: sliderEditingChanged).accentColor(.white)
+                    HStack {
+                        Text(formatTime(currentTime))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text(formatTime(trackDuration))
+                            .foregroundColor(.white)
+                    }
                 }
+                .padding()
+                
+                Spacer()
 
-                Button(action: nextTapped) {
-                    Image(systemName: "forward.fill")
-                        .resizable()
-                        .frame(width: 40, height: 30)
-                        .foregroundColor(.white)
-                }
-                Button(action: shuffleTapped) {
-                    Image(systemName: "shuffle")
-                        .resizable()
-                        .frame(width: 30, height: 30)
-                        .foregroundColor(is_shuffling ? .blue : .white)
+                HStack(spacing: 60) {
+                    Spacer()
+                    Button(action: previousTapped) {
+                        Image(systemName: "backward.fill")
+                            .resizable()
+                            .frame(width: 36, height: 27)
+                            .foregroundColor(.white)
+                    }
+
+                    Button(action: playPauseTapped) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .resizable()
+                            .frame(width: 35, height: 35)
+                            .foregroundColor(.white)
+                    }
+
+                    Button(action: nextTapped) {
+                        Image(systemName: "forward.fill")
+                            .resizable()
+                            .frame(width: 36, height: 27)
+                            .foregroundColor(.white)
+                    }
+                    Button(action: shuffleTapped) {
+                        Image(systemName: "shuffle")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .foregroundColor(is_shuffling ? .blue : .white)
+                    }
+                    Spacer()
                 }
                 Spacer()
             }
-
-            
+            .frame(height: 250)
+            .background(Color(.darkGray))
         }
-        .background(Color(.darkGray).edgesIgnoringSafeArea(.all))
+        .background(Color(.black)
+        .edgesIgnoringSafeArea(.all))
         .onAppear{
             configureAudioSession()
             setupRemoteCommands()
@@ -277,7 +288,7 @@ struct MusicPlayerView: View {
     
     private func checkForTrackEnd() {
         guard let player = audioPlayer else { return }
-        if player.currentTime >= player.duration - 0.5{
+        if player.currentTime >= player.duration - 1{
             nextTapped()
         }
     }
