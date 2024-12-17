@@ -11,7 +11,7 @@ struct MusicPlayerView: View {
     @State private var isPlaying: Bool = false
     @State private var currentTime: TimeInterval = 0
     @State private var trackDuration: TimeInterval = 0
-    @State private var directoryPath = "/music_library/"
+    @State private var directoryPath = ""
     @State private var is_shuffling = false
     
     var body: some View {
@@ -94,14 +94,34 @@ struct MusicPlayerView: View {
         }
     }
     
-    func listFilesInDirectory(directoryName: String) -> [String]{
-        guard let directoryURL = Bundle.main.url(forResource: directoryName, withExtension: nil) else {
-            print("Directory not found")
-            return []
-        }
+//    func listFilesInDirectory(directoryName: String) -> [String]{
+//        guard let directoryURL = Bundle.main.url(forResource: directoryName, withExtension: nil) else {
+//            print("Directory not found")
+//            return []
+//        }
+//        
+//        do {
+//            let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
+//            
+//            var list:[String] = []
+//            for fileURL in fileURLs {
+//                list.append(fileURL.lastPathComponent)
+//            }
+//            return list
+//        } catch {
+//            print("Error reading contents of directory: \(error)")
+//            return []
+//        }
+//    }
+    
+    func listFilesInDirectory(directoryName: URL) -> [String]{
+//        guard let directoryURL = Bundle.main.url(forResource: directoryName, withExtension: nil) else {
+//            print("Directory not found")
+//            return []
+//        }
         
         do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryName, includingPropertiesForKeys: nil)
             
             var list:[String] = []
             for fileURL in fileURLs {
@@ -115,10 +135,24 @@ struct MusicPlayerView: View {
     }
     
     private func loadTracksFromDirectory(){
-        trackFiles = listFilesInDirectory(directoryName: "music_library")
-        if !trackFiles.isEmpty {
-//            playTrack(at: currentTrackIndex)
-        } else {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let customDirectory = documentsURL.appendingPathComponent("Music")
+                
+        if !fileManager.fileExists(atPath: customDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: customDirectory, withIntermediateDirectories: true, attributes: nil)
+                print("Custom directory created at: \(customDirectory.path)")
+            } catch {
+                print("Error creating custom directory: \(error)")
+            }
+        }
+        
+        directoryPath = customDirectory.path()
+        trackFiles = listFilesInDirectory(directoryName: customDirectory)
+
+//        trackFiles = listFilesInDirectory(directoryName: "music_library")
+        if trackFiles.isEmpty {
             nowPlaying = "No MP3 files found"
         }
     }
@@ -153,10 +187,12 @@ struct MusicPlayerView: View {
 //    }
 
     private func playTrack(at index: Int) {
-        let trackName = "music_library/"+trackFiles[index].replacing(".mp3", with: "")
-        let trackPath = Bundle.main.path(forResource: trackName, ofType: "mp3")!
+        let trackName = trackFiles[index]
 
-//        let trackPath = (directoryPath as NSString).appendingPathComponent(trackName)
+        //        let trackName = "music_library/"+trackFiles[index].replacing(".mp3", with: "")
+//        let trackPath = Bundle.main.path(forResource: trackName, ofType: "mp3")!
+
+        let trackPath = (directoryPath as NSString).appendingPathComponent(trackName)
 
         do {
             audioPlayer?.stop()
@@ -166,7 +202,7 @@ struct MusicPlayerView: View {
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
 
-            nowPlaying = trackName.replacing("music_library/", with: "")
+            nowPlaying = trackName.replacing(".mp3", with: "")
             isPlaying = true
             setupNowPlayingInfo()
         } catch {
