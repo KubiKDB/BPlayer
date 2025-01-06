@@ -7,6 +7,7 @@ struct MusicPlayerView: View {
     @State private var audioPlayer: AVAudioPlayer?
     @State private var currentTrackIndex: Int = 0
     @State private var trackFiles: [String] = []
+    @State private var trackImages: [UIImage] = []
     @State private var nowPlaying: String = "No track loaded"
     @State private var isPlaying: Bool = false
     @State private var currentTime: TimeInterval = 0
@@ -14,6 +15,7 @@ struct MusicPlayerView: View {
     @State private var directoryPath = ""
     @State private var is_shuffling = false
     @State private var is_repeating = false
+    @State private var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -25,8 +27,16 @@ struct MusicPlayerView: View {
                         playTrack(at: index)
                     }
                 }) {
-                    Text(track.replacing(".mp3", with: ""))
-                        .foregroundColor(.white)
+                    HStack{
+                        if let index = trackFiles.firstIndex(of: track) {
+                            Image(uiImage: trackImages[index])
+                                .resizable()
+                                .frame(width: 30, height: 30)
+                        }
+                        Text(track.replacing(".mp3", with: ""))
+                            .foregroundColor(.white)
+                    }
+                    
                 }
             }
             .padding(.top, 1)
@@ -109,6 +119,9 @@ struct MusicPlayerView: View {
             setupRemoteCommands()
             loadTracksFromDirectory()
             trackFiles.sort()
+            for track in trackFiles {
+                trackImages.append(fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(track))))
+            }
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             guard let player = audioPlayer, player.isPlaying else { return }
@@ -140,7 +153,7 @@ struct MusicPlayerView: View {
         if !fileManager.fileExists(atPath: customDirectory.path) {
             do {
                 try fileManager.createDirectory(at: customDirectory, withIntermediateDirectories: true, attributes: nil)
-                print("Custom directory created at: \(customDirectory.path)")
+                print("Dir path: \(customDirectory.path)")
             } catch {
                 print("Error creating custom directory: \(error)")
             }
@@ -165,25 +178,59 @@ struct MusicPlayerView: View {
             currentTime = 0
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
-
             nowPlaying = trackName.replacing(".mp3", with: "")
             isPlaying = true
+            
+            let artwork = fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(trackFiles[currentTrackIndex])))
+            backgroundPlayerArtwork = MPMediaItemArtwork(boundsSize: artwork.size) { _ in artwork}
             setupNowPlayingInfo()
         } catch {
             nowPlaying = "Error playing track: \(error.localizedDescription)"
         }
     }
+    
+    //TODO: replace deprecation
+    private func fetchAlbumArtwork(from url: URL) -> UIImage {
+        let asset = AVAsset(url: url)
+        let metadata = asset.commonMetadata
+        let art:UIImage
+        if let artworkItem = metadata.first(where: { $0.commonKey == .commonKeyArtwork }),
+        let artworkData = artworkItem.dataValue,
+        let image = UIImage(data: artworkData) {
+            art = image
+        }
+        else {
+            art = UIImage(named: "default_note")! // Fallback image
+        }
+        return art
+    }
+    
+//    private func fetchAlbumArtwork(from url: URL) -> UIImage {
+//        let asset = AVAsset(url: url)
+//        let imageGenerator = AVAssetImageGenerator(asset: asset)
+//        
+//        var image: UIImage
+//        do {
+//            // Request a thumbnail at the first time index (0)
+//            let thumbnailImage = try imageGenerator.copyCGImage(at: .zero, actualTime: nil)
+//            image = UIImage(cgImage: thumbnailImage)
+//        } catch {
+//            // Fallback in case of an error
+//            image = UIImage(named: "default_note")! // Default fallback image
+//        }
+//        
+//        return image
+//    }
 
     private func playPauseTapped() {
         guard let audioPlayer = audioPlayer else { return }
 
         if audioPlayer.isPlaying {
             audioPlayer.pause()
-            isPlaying = false
         } else {
             audioPlayer.play()
-            isPlaying = true
         }
+        isPlaying = !isPlaying
     }
 
     private func nextTapped() {
@@ -263,12 +310,15 @@ struct MusicPlayerView: View {
 
     private func setupNowPlayingInfo() {
         guard let player = audioPlayer else { return }
+        
+        
 
         let nowPlayingInfo: [String: Any] = [
             MPMediaItemPropertyTitle: nowPlaying,
             MPMediaItemPropertyPlaybackDuration: player.duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
+            MPMediaItemPropertyArtwork: backgroundPlayerArtwork!
         ]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
