@@ -13,17 +13,19 @@ struct MusicPlayerView: View {
     @State private var trackDuration: TimeInterval = 0
     @State private var directoryPath = ""
     @State private var is_shuffling = false
+    @State private var is_repeating = false
     
     var body: some View {
         VStack(spacing: 0) {
             List(trackFiles, id: \ .self) { track in
                 Button(action: {
                     if let index = trackFiles.firstIndex(of: track) {
+                        is_repeating = false
                         currentTrackIndex = index
                         playTrack(at: index)
                     }
                 }) {
-                    Text(track)
+                    Text(track.replacing(".mp3", with: ""))
                         .foregroundColor(.white)
                 }
             }
@@ -55,7 +57,14 @@ struct MusicPlayerView: View {
                 
                 Spacer()
 
-                HStack(spacing: 60) {
+                HStack(spacing: 0) {
+                    Spacer()
+                    Button(action: repeatTapped) {
+                        Image(systemName: "repeat")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .foregroundColor(is_repeating ? .blue : .white)
+                    }
                     Spacer()
                     Button(action: previousTapped) {
                         Image(systemName: "backward.fill")
@@ -63,6 +72,7 @@ struct MusicPlayerView: View {
                             .frame(width: 36, height: 27)
                             .foregroundColor(.white)
                     }
+                    Spacer()
 
                     Button(action: playPauseTapped) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -70,6 +80,7 @@ struct MusicPlayerView: View {
                             .frame(width: 35, height: 35)
                             .foregroundColor(.white)
                     }
+                    Spacer()
 
                     Button(action: nextTapped) {
                         Image(systemName: "forward.fill")
@@ -77,6 +88,7 @@ struct MusicPlayerView: View {
                             .frame(width: 36, height: 27)
                             .foregroundColor(.white)
                     }
+                    Spacer()
                     Button(action: shuffleTapped) {
                         Image(systemName: "shuffle")
                             .resizable()
@@ -105,32 +117,7 @@ struct MusicPlayerView: View {
         }
     }
     
-//    func listFilesInDirectory(directoryName: String) -> [String]{
-//        guard let directoryURL = Bundle.main.url(forResource: directoryName, withExtension: nil) else {
-//            print("Directory not found")
-//            return []
-//        }
-//        
-//        do {
-//            let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
-//            
-//            var list:[String] = []
-//            for fileURL in fileURLs {
-//                list.append(fileURL.lastPathComponent)
-//            }
-//            return list
-//        } catch {
-//            print("Error reading contents of directory: \(error)")
-//            return []
-//        }
-//    }
-    
     func listFilesInDirectory(directoryName: URL) -> [String]{
-//        guard let directoryURL = Bundle.main.url(forResource: directoryName, withExtension: nil) else {
-//            print("Directory not found")
-//            return []
-//        }
-        
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryName, includingPropertiesForKeys: nil)
             
@@ -161,47 +148,13 @@ struct MusicPlayerView: View {
         
         directoryPath = customDirectory.path()
         trackFiles = listFilesInDirectory(directoryName: customDirectory)
-
-//        trackFiles = listFilesInDirectory(directoryName: "music_library")
         if trackFiles.isEmpty {
             nowPlaying = "No MP3 files found"
         }
     }
-    
-//    private func loadTracksFromDirectory() {
-//        let fileManager = FileManager.default
-//
-//        directoryPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("Music").path()
-//        
-//        
-//
-//        if !fileManager.fileExists(atPath: directoryPath) {
-//            do {
-//                try fileManager.createDirectory(atPath: directoryPath, withIntermediateDirectories: true)
-//            } catch {
-//                print("Error creating custom directory: \(error)")
-//            }
-//        }
-//        
-//        do {
-//            let files = try fileManager.contentsOfDirectory(atPath: directoryPath)
-//            trackFiles = files.filter { $0.hasSuffix(".mp3") }
-//
-//            if !trackFiles.isEmpty {
-//                playTrack(at: currentTrackIndex)
-//            } else {
-//                nowPlaying = "No MP3 files found"
-//            }
-//        } catch {
-//            nowPlaying = "Failed to load tracks: \(error.localizedDescription)"
-//        }
-//    }
 
     private func playTrack(at index: Int) {
         let trackName = trackFiles[index]
-
-        //        let trackName = "music_library/"+trackFiles[index].replacing(".mp3", with: "")
-//        let trackPath = Bundle.main.path(forResource: trackName, ofType: "mp3")!
 
         let trackPath = (directoryPath as NSString).appendingPathComponent(trackName)
 
@@ -236,13 +189,24 @@ struct MusicPlayerView: View {
     private func nextTapped() {
         guard !trackFiles.isEmpty else { return }
 
+        is_repeating = false
         currentTrackIndex = (currentTrackIndex + 1) % trackFiles.count
+        playTrack(at: currentTrackIndex)
+    }
+    
+    private func playNextOnEnd(){
+        guard !trackFiles.isEmpty else { return }
+        
+        if !is_repeating {
+            currentTrackIndex = (currentTrackIndex + 1) % trackFiles.count
+        }
         playTrack(at: currentTrackIndex)
     }
 
     private func previousTapped() {
         guard !trackFiles.isEmpty else { return }
 
+        is_repeating = false
         currentTrackIndex = (currentTrackIndex - 1 + trackFiles.count) % trackFiles.count
         playTrack(at: currentTrackIndex)
     }
@@ -251,6 +215,7 @@ struct MusicPlayerView: View {
         guard !trackFiles.isEmpty else { return }
         
         is_shuffling = !is_shuffling
+        is_repeating = false
         
         if is_shuffling {
             trackFiles.shuffle()
@@ -259,8 +224,11 @@ struct MusicPlayerView: View {
         }
         
         currentTrackIndex = 0
-//        currentTrackIndex = Int.random(in: 0..<trackFiles.count)
         playTrack(at: currentTrackIndex)
+    }
+    
+    private func repeatTapped() {
+        is_repeating = !is_repeating
     }
     
     private func sliderEditingChanged(editing: Bool) {
@@ -289,7 +257,7 @@ struct MusicPlayerView: View {
     private func checkForTrackEnd() {
         guard let player = audioPlayer else { return }
         if player.currentTime >= player.duration - 1{
-            nextTapped()
+            playNextOnEnd()
         }
     }
 
