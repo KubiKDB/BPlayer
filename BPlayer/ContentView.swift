@@ -11,11 +11,25 @@ struct MusicPlayerView: View {
     @State private var currentTime: TimeInterval = 0
     @State private var trackDuration: TimeInterval = 0
     @State private var directoryPath = ""
-    @State private var is_shuffling = false
-    @State private var is_repeating = false
+    @State private var isShuffling = false
+    @State private var isRepeating = false
     @State private var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
+    @State private var selectedPlaylist: Playlist? = nil
+    @State private var files: [String] = []
+    @State private var pickFile: Bool = false
+    
+    @State private var playlists: [Playlist] = [
+        Playlist(name: "All songs"),
+        Playlist(name: "Favorite")
+    ]
     
     @State private var songs: [Song] = []
+    
+    struct Playlist: Identifiable, Hashable {
+        let id = UUID()
+        let name: String
+        let songs: [Song] = []
+    }
     
     struct Song: Comparable, Hashable {
         var trackName:String
@@ -34,12 +48,74 @@ struct MusicPlayerView: View {
         }
     }
     
+//    struct DocumentPicker: UIViewControllerRepresentable {
+//        var onPick: (URL?) -> Void
+//
+//        func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+//            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.data])
+//            picker.delegate = context.coordinator
+//            return picker
+//        }
+//
+//        func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+//
+//        func makeCoordinator() -> Coordinator {
+//            Coordinator(onPick: onPick)
+//        }
+//
+//        class Coordinator: NSObject, UIDocumentPickerDelegate {
+//            var onPick: (URL?) -> Void
+//
+//            init(onPick: @escaping (URL?) -> Void) {
+//                self.onPick = onPick
+//            }
+//
+//            func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+//                onPick(urls.first)
+//            }
+//
+//            func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+//                onPick(nil)
+//            }
+//        }
+//    }
+    
     var body: some View {
         VStack(spacing: 0) {
+            HStack{
+                Text(String(selectedPlaylist?.name ?? "All songs"))
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 10)
+                    .foregroundColor(.white)
+                Spacer()
+//                Button("Select a File") {
+//                        pickFile = true
+//                    }
+//                    .padding()
+//                    .background(Color.blue)
+//                    .foregroundColor(.white)
+//                    .cornerRadius(10)
+                Menu {
+                    ForEach(playlists, id: \.self) { playlist in
+                        Button(playlist.name) {
+                            if let index = playlists.firstIndex(of: playlist) {
+                                selectPlaylist(index: index)
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Playlists", systemImage: "line.3.horizontal")
+                        .font(.headline)
+                        .padding(.horizontal, 10)
+                }
+            }.padding(.bottom, 5)
+            
+            
             List(songs, id: \ .self) { song in
                 Button(action: {
                     if let index = songs.firstIndex(of: song) {
-                        is_repeating = false
+                        isRepeating = false
                         currentTrackIndex = index
                         playTrack(at: index)
                     }
@@ -49,14 +125,20 @@ struct MusicPlayerView: View {
                             Image(uiImage: songs[index].trackAlbumCover)
                                 .resizable()
                                 .frame(width: 30, height: 30)
-                        }
-                        Text(song.trackName.replacing(".mp3", with: ""))
-                            .foregroundColor(.white)
-                        Button(action: {
-                            //TODO favourite playlist
-                            songs[0].is_favourited = false
-                        }){
-                            
+                            Text(song.trackName.replacing(".mp3", with: ""))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Button(action: {
+                                //TODO favourite playlist
+                                songs[index].is_favourited = !songs[index].is_favourited
+                                // Save data
+                                UserDefaults.standard.set(songs[index].is_favourited, forKey: songs[index].trackName)
+                            }){
+                                Image(systemName: songs[index].is_favourited ? "heart.fill" : "heart")
+                                    .resizable()
+                                    .foregroundColor(songs[index].is_favourited ? .red : .white)
+                                    .frame(width: 20, height: 20)
+                            }
                         }
                     }
                     
@@ -96,7 +178,7 @@ struct MusicPlayerView: View {
                         Image(systemName: "repeat")
                             .resizable()
                             .frame(width: 30, height: 30)
-                            .foregroundColor(is_repeating ? .blue : .white)
+                            .foregroundColor(isRepeating ? .blue : .white)
                     }
                     Spacer()
                     Button(action: previousTapped) {
@@ -126,7 +208,7 @@ struct MusicPlayerView: View {
                         Image(systemName: "shuffle")
                             .resizable()
                             .frame(width: 30, height: 30)
-                            .foregroundColor(is_shuffling ? .blue : .white)
+                            .foregroundColor(isShuffling ? .blue : .white)
                     }
                     Spacer()
                 }
@@ -148,6 +230,13 @@ struct MusicPlayerView: View {
             currentTime = player.currentTime
             checkForTrackEnd()
         }
+//        .sheet(isPresented: $pickFile) {
+//                    DocumentPicker { url in
+//                        if let url = url {
+//                            importFile(from: url)
+//                        }
+//                    }
+//                }
     }
     
     func listFilesInDirectory(directoryName: URL) -> [String]{
@@ -178,16 +267,42 @@ struct MusicPlayerView: View {
                 print("Error creating custom directory: \(error)")
             }
         }
-        
         directoryPath = customDirectory.path()
-        let files = listFilesInDirectory(directoryName: customDirectory)
-        for file in files {
-            let song:Song = Song(trackName: file, trackAlbumCover: fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file))))
-            songs.append(song)
-        }
+        files = listFilesInDirectory(directoryName: customDirectory)
+        
+        selectPlaylist(index: 0)
+        
         if songs.isEmpty {
             nowPlaying = "No MP3 files found"
         }
+    }
+    
+    private func selectPlaylist(index: Int){
+        songs = []
+        for file in files {
+            // Retrieve data
+            let is_favourited = UserDefaults.standard.bool(forKey: file)
+            
+            var song:Song = Song(trackName: file, trackAlbumCover: fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file))))
+            song.is_favourited = is_favourited
+            if index == 0{
+                songs.append(song)
+            } else if index == 1 {
+                if song.is_favourited{
+                    songs.append(song)
+                }
+            }
+        }
+        isRepeating = false
+        isShuffling = false
+        isPlaying = false
+        songs.sort()
+        audioPlayer?.stop()
+        trackDuration = 0
+        currentTime = 0
+        nowPlaying = "No track loaded"
+        
+        selectedPlaylist = playlists[index]
     }
 
     private func playTrack(at index: Int) {
@@ -242,7 +357,7 @@ struct MusicPlayerView: View {
     private func nextTapped() {
         guard !songs.isEmpty else { return }
 
-        is_repeating = false
+        isRepeating = false
         currentTrackIndex = (currentTrackIndex + 1) % songs.count
         playTrack(at: currentTrackIndex)
     }
@@ -250,7 +365,7 @@ struct MusicPlayerView: View {
     private func playNextOnEnd(){
         guard !songs.isEmpty else { return }
         
-        if !is_repeating {
+        if !isRepeating {
             currentTrackIndex = (currentTrackIndex + 1) % songs.count
         }
         playTrack(at: currentTrackIndex)
@@ -259,7 +374,7 @@ struct MusicPlayerView: View {
     private func previousTapped() {
         guard !songs.isEmpty else { return }
 
-        is_repeating = false
+        isRepeating = false
         currentTrackIndex = (currentTrackIndex - 1 + songs.count) % songs.count
         playTrack(at: currentTrackIndex)
     }
@@ -267,10 +382,10 @@ struct MusicPlayerView: View {
     private func shuffleTapped() {
         guard !songs.isEmpty else { return }
         
-        is_shuffling = !is_shuffling
-        is_repeating = false
+        isShuffling = !isShuffling
+        isRepeating = false
         
-        if is_shuffling {
+        if isShuffling {
             songs.shuffle()
         }else{
             songs.sort()
@@ -281,7 +396,7 @@ struct MusicPlayerView: View {
     }
     
     private func repeatTapped() {
-        is_repeating = !is_repeating
+        isRepeating = !isRepeating
     }
     
     private func sliderEditingChanged(editing: Bool) {
@@ -356,6 +471,25 @@ struct MusicPlayerView: View {
             return .success
         }
     }
+    
+//    private func importFile(from url: URL) {
+//            let fileManager = FileManager.default
+//            let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+//
+//            let destinationURL = documentsURL.appendingPathComponent(url.lastPathComponent)
+//
+//            do {
+//                // If file already exists, delete it
+//                if fileManager.fileExists(atPath: destinationURL.path) {
+//                    try fileManager.removeItem(at: destinationURL)
+//                }
+//
+//                // Copy file to the app's internal directory
+//                try fileManager.copyItem(at: url, to: destinationURL)
+//            } catch {
+//                print("Error importing file: \(error)")
+//            }
+//        }
 }
 
 struct MusicPlayerView_Previews: PreviewProvider {
