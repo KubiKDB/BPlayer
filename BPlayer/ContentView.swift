@@ -14,9 +14,8 @@ struct MusicPlayerView: View {
     @State private var isShuffling = false
     @State private var isRepeating = false
     @State private var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
-    @State private var selectedPlaylist: Playlist? = nil
+    @AppStorage("selectedPlaylist") private var selectedPlaylist: Int = 0
     @State private var files: [String] = []
-    @State private var pickFile: Bool = false
     
     @State private var playlists: [Playlist] = [
         Playlist(name: "All songs"),
@@ -35,7 +34,7 @@ struct MusicPlayerView: View {
         var trackName:String
         var trackAlbumCover:UIImage
         var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
-        var is_favourited:Bool = false
+        var isFavourited:Bool = false
 
         init(trackName: String, trackAlbumCover: UIImage) {
             self.trackName = trackName
@@ -48,104 +47,43 @@ struct MusicPlayerView: View {
         }
     }
     
-//    struct DocumentPicker: UIViewControllerRepresentable {
-//        var onPick: (URL?) -> Void
-//
-//        func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-//            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.data])
-//            picker.delegate = context.coordinator
-//            return picker
-//        }
-//
-//        func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-//
-//        func makeCoordinator() -> Coordinator {
-//            Coordinator(onPick: onPick)
-//        }
-//
-//        class Coordinator: NSObject, UIDocumentPickerDelegate {
-//            var onPick: (URL?) -> Void
-//
-//            init(onPick: @escaping (URL?) -> Void) {
-//                self.onPick = onPick
-//            }
-//
-//            func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-//                onPick(urls.first)
-//            }
-//
-//            func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-//                onPick(nil)
-//            }
-//        }
-//    }
-    
     var body: some View {
         VStack(spacing: 0) {
             HStack{
-                Text(String(selectedPlaylist?.name ?? "All songs"))
+                Text(playlists[selectedPlaylist].name)
                     .font(.headline)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 10)
                     .foregroundColor(.white)
+                
                 Spacer()
-//                Button("Select a File") {
-//                        pickFile = true
-//                    }
-//                    .padding()
-//                    .background(Color.blue)
-//                    .foregroundColor(.white)
-//                    .cornerRadius(10)
-                Menu {
-                    ForEach(playlists, id: \.self) { playlist in
-                        Button(playlist.name) {
-                            if let index = playlists.firstIndex(of: playlist) {
-                                selectPlaylist(index: index)
-                            }
-                        }
-                    }
-                } label: {
-                    Label("Playlists", systemImage: "line.3.horizontal")
-                        .font(.headline)
-                        .padding(.horizontal, 10)
-                }
+
+                PlaylistMenuView(
+                        playlists: $playlists,
+                        onSelectPlaylist: selectPlaylist
+                )
             }.padding(.bottom, 5)
             
             
-            List(songs, id: \ .self) { song in
-                Button(action: {
-                    if let index = songs.firstIndex(of: song) {
+            List(songs, id: \.self) { song in
+                if let index = songs.firstIndex(of: song) {
+                    SongRowView(
+                        song: song,
+                        isFavorite: songs[index].isFavourited,
+                        onFavoriteToggle: {
+                            songs[index].isFavourited.toggle()
+                            UserDefaults.standard.set(songs[index].isFavourited, forKey: songs[index].trackName)
+                        }
+                    )
+                    .onTapGesture {
                         isRepeating = false
                         currentTrackIndex = index
                         playTrack(at: index)
                     }
-                }) {
-                    HStack{
-                        if let index = songs.firstIndex(of: song) {
-                            Image(uiImage: songs[index].trackAlbumCover)
-                                .resizable()
-                                .frame(width: 30, height: 30)
-                            Text(song.trackName.replacing(".mp3", with: ""))
-                                .foregroundColor(.white)
-                            Spacer()
-                            Button(action: {
-                                //TODO favourite playlist
-                                songs[index].is_favourited = !songs[index].is_favourited
-                                // Save data
-                                UserDefaults.standard.set(songs[index].is_favourited, forKey: songs[index].trackName)
-                            }){
-                                Image(systemName: songs[index].is_favourited ? "heart.fill" : "heart")
-                                    .resizable()
-                                    .foregroundColor(songs[index].is_favourited ? .red : .white)
-                                    .frame(width: 20, height: 20)
-                            }
-                        }
-                    }
-                    
                 }
             }
             .padding(.top, 1)
-            
+
             
             VStack() {
                 Spacer()
@@ -159,7 +97,7 @@ struct MusicPlayerView: View {
                 Spacer()
 
                 VStack(spacing: 8) {
-                    Slider(value: $currentTime, in: 0...trackDuration, onEditingChanged: sliderEditingChanged).accentColor(.white)
+                    Slider(value: $currentTime, in: 0...trackDuration, onEditingChanged: slideTrackbar).accentColor(.white)
                     HStack {
                         Text(formatTime(currentTime))
                             .foregroundColor(.white)
@@ -171,47 +109,18 @@ struct MusicPlayerView: View {
                 .padding()
                 
                 Spacer()
+                
+                PlaybackControlsView(
+                        isPlaying: $isPlaying,
+                        isShuffling: $isShuffling,
+                        isRepeating: $isRepeating,
+                        onPlayPause: playPauseTapped,
+                        onNext: next,
+                        onPrevious: previous,
+                        onShuffle: shuffle,
+                        onRepeat: repeatTapped
+                )
 
-                HStack(spacing: 0) {
-                    Spacer()
-                    Button(action: repeatTapped) {
-                        Image(systemName: "repeat")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                            .foregroundColor(isRepeating ? .blue : .white)
-                    }
-                    Spacer()
-                    Button(action: previousTapped) {
-                        Image(systemName: "backward.fill")
-                            .resizable()
-                            .frame(width: 36, height: 27)
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-
-                    Button(action: playPauseTapped) {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .resizable()
-                            .frame(width: 35, height: 35)
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-
-                    Button(action: nextTapped) {
-                        Image(systemName: "forward.fill")
-                            .resizable()
-                            .frame(width: 36, height: 27)
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-                    Button(action: shuffleTapped) {
-                        Image(systemName: "shuffle")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                            .foregroundColor(isShuffling ? .blue : .white)
-                    }
-                    Spacer()
-                }
                 Spacer()
             }
             .frame(height: 250)
@@ -230,13 +139,6 @@ struct MusicPlayerView: View {
             currentTime = player.currentTime
             checkForTrackEnd()
         }
-//        .sheet(isPresented: $pickFile) {
-//                    DocumentPicker { url in
-//                        if let url = url {
-//                            importFile(from: url)
-//                        }
-//                    }
-//                }
     }
     
     func listFilesInDirectory(directoryName: URL) -> [String]{
@@ -270,7 +172,7 @@ struct MusicPlayerView: View {
         directoryPath = customDirectory.path()
         files = listFilesInDirectory(directoryName: customDirectory)
         
-        selectPlaylist(index: 0)
+        selectPlaylist(index: selectedPlaylist)
         
         if songs.isEmpty {
             nowPlaying = "No MP3 files found"
@@ -280,15 +182,14 @@ struct MusicPlayerView: View {
     private func selectPlaylist(index: Int){
         songs = []
         for file in files {
-            // Retrieve data
             let is_favourited = UserDefaults.standard.bool(forKey: file)
             
             var song:Song = Song(trackName: file, trackAlbumCover: fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file))))
-            song.is_favourited = is_favourited
+            song.isFavourited = is_favourited
             if index == 0{
                 songs.append(song)
             } else if index == 1 {
-                if song.is_favourited{
+                if song.isFavourited{
                     songs.append(song)
                 }
             }
@@ -302,7 +203,7 @@ struct MusicPlayerView: View {
         currentTime = 0
         nowPlaying = "No track loaded"
         
-        selectedPlaylist = playlists[index]
+        selectedPlaylist = index
     }
 
     private func playTrack(at index: Int) {
@@ -312,6 +213,7 @@ struct MusicPlayerView: View {
 
         do {
             audioPlayer?.stop()
+            audioPlayer = nil
             audioPlayer = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: trackPath))
             trackDuration = audioPlayer?.duration ?? 0
             currentTime = 0
@@ -351,10 +253,10 @@ struct MusicPlayerView: View {
         } else {
             audioPlayer.play()
         }
-        isPlaying = !isPlaying
+        isPlaying.toggle()
     }
 
-    private func nextTapped() {
+    private func next() {
         guard !songs.isEmpty else { return }
 
         isRepeating = false
@@ -362,7 +264,7 @@ struct MusicPlayerView: View {
         playTrack(at: currentTrackIndex)
     }
     
-    private func playNextOnEnd(){
+    private func nextOnEnd(){
         guard !songs.isEmpty else { return }
         
         if !isRepeating {
@@ -371,7 +273,7 @@ struct MusicPlayerView: View {
         playTrack(at: currentTrackIndex)
     }
 
-    private func previousTapped() {
+    private func previous() {
         guard !songs.isEmpty else { return }
 
         isRepeating = false
@@ -379,10 +281,10 @@ struct MusicPlayerView: View {
         playTrack(at: currentTrackIndex)
     }
 
-    private func shuffleTapped() {
+    private func shuffle() {
         guard !songs.isEmpty else { return }
         
-        isShuffling = !isShuffling
+        isShuffling.toggle()
         isRepeating = false
         
         if isShuffling {
@@ -396,10 +298,10 @@ struct MusicPlayerView: View {
     }
     
     private func repeatTapped() {
-        isRepeating = !isRepeating
+        isRepeating.toggle()
     }
     
-    private func sliderEditingChanged(editing: Bool) {
+    private func slideTrackbar(editing: Bool) {
         if !editing, let player = audioPlayer {
             player.currentTime = currentTime
             setupNowPlayingInfo()
@@ -425,14 +327,12 @@ struct MusicPlayerView: View {
     private func checkForTrackEnd() {
         guard let player = audioPlayer else { return }
         if player.currentTime >= player.duration - 1{
-            playNextOnEnd()
+            nextOnEnd()
         }
     }
 
     private func setupNowPlayingInfo() {
         guard let player = audioPlayer else { return }
-        
-        
 
         let nowPlayingInfo: [String: Any] = [
             MPMediaItemPropertyTitle: nowPlaying,
@@ -462,34 +362,15 @@ struct MusicPlayerView: View {
         }
         
         commandCenter.nextTrackCommand.addTarget { _ in
-            self.nextTapped()
+            self.next()
             return .success
         }
         
         commandCenter.previousTrackCommand.addTarget { _ in
-            self.previousTapped()
+            self.previous()
             return .success
         }
     }
-    
-//    private func importFile(from url: URL) {
-//            let fileManager = FileManager.default
-//            let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-//
-//            let destinationURL = documentsURL.appendingPathComponent(url.lastPathComponent)
-//
-//            do {
-//                // If file already exists, delete it
-//                if fileManager.fileExists(atPath: destinationURL.path) {
-//                    try fileManager.removeItem(at: destinationURL)
-//                }
-//
-//                // Copy file to the app's internal directory
-//                try fileManager.copyItem(at: url, to: destinationURL)
-//            } catch {
-//                print("Error importing file: \(error)")
-//            }
-//        }
 }
 
 struct MusicPlayerView_Previews: PreviewProvider {
