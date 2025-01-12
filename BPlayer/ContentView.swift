@@ -13,21 +13,19 @@ struct MusicPlayerView: View {
     @State private var directoryPath = ""
     @State private var isShuffling = false
     @State private var isRepeating = false
-    @State private var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
     @AppStorage("selectedPlaylist") private var selectedPlaylist: Int = 0
-    @State private var files: [String] = []
     
     @State private var playlists: [Playlist] = [
-        Playlist(name: "All songs"),
-        Playlist(name: "Favorite")
+        Playlist(id: 0, name: "All songs"),
+        Playlist(id: 1, name: "Favorite")
     ]
     
-    @State private var songs: [Song] = []
     
+
     struct Playlist: Identifiable, Hashable {
-        let id = UUID()
-        let name: String
-        let songs: [Song] = []
+        let id:Int
+        var name: String
+        var songs: [Song] = []
     }
     
     struct Song: Comparable, Hashable {
@@ -47,6 +45,15 @@ struct MusicPlayerView: View {
         }
     }
     
+    private func createID() -> Int{
+        return playlists.count
+    }
+    
+    private func createPlaylist() {
+        //TODO: create playlists
+        print("Created playlist")
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             HStack{
@@ -60,26 +67,28 @@ struct MusicPlayerView: View {
 
                 PlaylistMenuView(
                         playlists: $playlists,
-                        onSelectPlaylist: selectPlaylist
+                        onSelectPlaylist: selectPlaylist,
+                        createPlaylist: createPlaylist
                 )
             }.padding(.bottom, 5)
             
             
-            List(songs, id: \.self) { song in
-                if let index = songs.firstIndex(of: song) {
+            List(playlists[selectedPlaylist].songs, id: \.self) { song in
+                if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
                     SongRowView(
                         song: song,
-                        isFavorite: songs[index].isFavourited,
+                        isFavorite: song.isFavourited,
                         onFavoriteToggle: {
-                            songs[index].isFavourited.toggle()
-                            UserDefaults.standard.set(songs[index].isFavourited, forKey: songs[index].trackName)
+                            //TODO: potential bug
+                            playlists[selectedPlaylist].songs[index].isFavourited.toggle()
+                            UserDefaults.standard.set(song.isFavourited, forKey: song.trackName)
+                        },
+                        onSelect: {
+                            isRepeating = false
+                            currentTrackIndex = index
+                            playTrack(at: index)
                         }
                     )
-                    .onTapGesture {
-                        isRepeating = false
-                        currentTrackIndex = index
-                        playTrack(at: index)
-                    }
                 }
             }
             .padding(.top, 1)
@@ -132,7 +141,7 @@ struct MusicPlayerView: View {
             configureAudioSession()
             setupRemoteCommands()
             loadTracksFromDirectory()
-            songs.sort()
+            playlists[selectedPlaylist].songs.sort()
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             guard let player = audioPlayer, player.isPlaying else { return }
@@ -170,44 +179,49 @@ struct MusicPlayerView: View {
             }
         }
         directoryPath = customDirectory.path()
-        files = listFilesInDirectory(directoryName: customDirectory)
-        
-        selectPlaylist(index: selectedPlaylist)
-        
-        if songs.isEmpty {
-            nowPlaying = "No MP3 files found"
-        }
-    }
-    
-    private func selectPlaylist(index: Int){
-        songs = []
+        let files = listFilesInDirectory(directoryName: customDirectory)
         for file in files {
             let is_favourited = UserDefaults.standard.bool(forKey: file)
             
             var song:Song = Song(trackName: file, trackAlbumCover: fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file))))
             song.isFavourited = is_favourited
-            if index == 0{
-                songs.append(song)
-            } else if index == 1 {
-                if song.isFavourited{
-                    songs.append(song)
-                }
+            
+            playlists[0].songs.append(song)
+            if song.isFavourited{
+                playlists[1].songs.append(song)
             }
         }
-        isRepeating = false
-        isShuffling = false
-        isPlaying = false
-        songs.sort()
-        audioPlayer?.stop()
-        trackDuration = 0
-        currentTime = 0
-        nowPlaying = "No track loaded"
+        selectPlaylist(index: selectedPlaylist)
         
-        selectedPlaylist = index
+        if playlists[0].songs.isEmpty {
+            nowPlaying = "No MP3 files found"
+        }
+    }
+    
+    private func selectPlaylist(index: Int){
+        if index != selectedPlaylist {
+            playlists[1].songs = []
+            for song in playlists[0].songs {
+                if song.isFavourited{
+                    playlists[1].songs.append(song)
+                }
+            }
+            isRepeating = false
+            isShuffling = false
+            isPlaying = false
+            playlists[index].songs.sort()
+            audioPlayer?.stop()
+            trackDuration = 0
+            currentTime = 0
+            nowPlaying = "No track loaded"
+                    
+            selectedPlaylist = index
+            setupNowPlayingInfo()
+        }
     }
 
     private func playTrack(at index: Int) {
-        let trackName = songs[index].trackName
+        let trackName = playlists[selectedPlaylist].songs[index].trackName
 
         let trackPath = (directoryPath as NSString).appendingPathComponent(trackName)
 
@@ -221,11 +235,19 @@ struct MusicPlayerView: View {
             audioPlayer?.play()
             nowPlaying = trackName.replacing(".mp3", with: "")
             isPlaying = true
-            backgroundPlayerArtwork = songs[index].backgroundPlayerArtwork
             setupNowPlayingInfo()
         } catch {
             nowPlaying = "Error playing track: \(error.localizedDescription)"
         }
+    }
+    
+    private func findPlaylist(_name:String) -> Playlist?{
+        for playlist in playlists {
+            if playlist.name == _name {
+                return playlist
+            }
+        }
+        return nil
     }
     
     
@@ -257,40 +279,40 @@ struct MusicPlayerView: View {
     }
 
     private func next() {
-        guard !songs.isEmpty else { return }
+        guard !playlists[selectedPlaylist].songs.isEmpty else { return }
 
         isRepeating = false
-        currentTrackIndex = (currentTrackIndex + 1) % songs.count
+        currentTrackIndex = (currentTrackIndex + 1) % playlists[selectedPlaylist].songs.count
         playTrack(at: currentTrackIndex)
     }
     
     private func nextOnEnd(){
-        guard !songs.isEmpty else { return }
+        guard !playlists[selectedPlaylist].songs.isEmpty else { return }
         
         if !isRepeating {
-            currentTrackIndex = (currentTrackIndex + 1) % songs.count
+            currentTrackIndex = (currentTrackIndex + 1) % playlists[selectedPlaylist].songs.count
         }
         playTrack(at: currentTrackIndex)
     }
 
     private func previous() {
-        guard !songs.isEmpty else { return }
+        guard !playlists[selectedPlaylist].songs.isEmpty else { return }
 
         isRepeating = false
-        currentTrackIndex = (currentTrackIndex - 1 + songs.count) % songs.count
+        currentTrackIndex = (currentTrackIndex - 1 + playlists[selectedPlaylist].songs.count) % playlists[selectedPlaylist].songs.count
         playTrack(at: currentTrackIndex)
     }
 
     private func shuffle() {
-        guard !songs.isEmpty else { return }
+        guard !playlists[selectedPlaylist].songs.isEmpty else { return }
         
         isShuffling.toggle()
         isRepeating = false
         
         if isShuffling {
-            songs.shuffle()
+            playlists[selectedPlaylist].songs.shuffle()
         }else{
-            songs.sort()
+            playlists[selectedPlaylist].songs.sort()
         }
                 
         currentTrackIndex = 0
@@ -339,7 +361,7 @@ struct MusicPlayerView: View {
             MPMediaItemPropertyPlaybackDuration: player.duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
-            MPMediaItemPropertyArtwork: backgroundPlayerArtwork!
+            MPMediaItemPropertyArtwork: playlists[selectedPlaylist].songs[currentTrackIndex].backgroundPlayerArtwork!
         ]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }

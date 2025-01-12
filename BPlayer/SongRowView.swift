@@ -4,15 +4,19 @@ struct SongRowView: View {
     let song: MusicPlayerView.Song
     var isFavorite: Bool
     var onFavoriteToggle: () -> Void
+    var onSelect: () -> Void
 
     var body: some View {
         HStack {
-            Image(uiImage: song.trackAlbumCover)
-                .resizable()
-                .frame(width: 30, height: 30)
+            HStack{
+                Image(uiImage: song.trackAlbumCover)
+                    .resizable()
+                    .frame(width: 30, height: 30)
 
-            Text(song.trackName.replacingOccurrences(of: ".mp3", with: ""))
-                .foregroundColor(.white)
+                Text(song.trackName.replacingOccurrences(of: ".mp3", with: ""))
+                    .foregroundColor(.white)
+            }.onTapGesture(perform: onSelect)
+            
 
             Spacer()
 
