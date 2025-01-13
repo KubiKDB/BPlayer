@@ -30,14 +30,16 @@ struct MusicPlayerView: View {
     
     struct Song: Comparable, Hashable {
         var trackName:String
-        var trackAlbumCover:UIImage
-        var backgroundPlayerArtwork: MPMediaItemArtwork? = nil
+        var trackAlbumCover:UIImage?
+        var backgroundPlayerArtwork: MPMediaItemArtwork?
         var isFavourited:Bool = false
 
-        init(trackName: String, trackAlbumCover: UIImage) {
+        init(trackName: String, trackAlbumCover: UIImage?) {
             self.trackName = trackName
             self.trackAlbumCover = trackAlbumCover
-            self.backgroundPlayerArtwork = MPMediaItemArtwork(boundsSize: trackAlbumCover.size) { _ in trackAlbumCover}
+            if trackAlbumCover != nil {
+                self.backgroundPlayerArtwork = MPMediaItemArtwork(boundsSize: trackAlbumCover!.size) { _ in trackAlbumCover!}
+            }
         }
         
         static func < (lhs: Song, rhs: Song) -> Bool {
@@ -183,7 +185,9 @@ struct MusicPlayerView: View {
         for file in files {
             let is_favourited = UserDefaults.standard.bool(forKey: file)
             
-            var song:Song = Song(trackName: file, trackAlbumCover: fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file))))
+            let artwork = fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file)))
+            
+            var song:Song = Song(trackName: file, trackAlbumCover: artwork)
             song.isFavourited = is_favourited
             
             playlists[0].songs.append(song)
@@ -206,17 +210,19 @@ struct MusicPlayerView: View {
                     playlists[1].songs.append(song)
                 }
             }
+            currentTrackIndex = 0
             isRepeating = false
             isShuffling = false
             isPlaying = false
             playlists[index].songs.sort()
             audioPlayer?.stop()
+            audioPlayer?.currentTime = 0
             trackDuration = 0
             currentTime = 0
             nowPlaying = "No track loaded"
                     
             selectedPlaylist = index
-            setupNowPlayingInfo()
+            setupNowPlayingInfo(clear: true)
         }
     }
 
@@ -252,23 +258,21 @@ struct MusicPlayerView: View {
     
     
     //TODO: replace deprecation
-    private func fetchAlbumArtwork(from url: URL) -> UIImage {
+    private func fetchAlbumArtwork(from url: URL) -> UIImage? {
         let asset = AVAsset(url: url)
         let metadata = asset.commonMetadata
-        let art:UIImage
+        var art:UIImage? = nil
         if let artworkItem = metadata.first(where: { $0.commonKey == .commonKeyArtwork }),
         let artworkData = artworkItem.dataValue,
         let image = UIImage(data: artworkData) {
             art = image
-        }
-        else {
-            art = UIImage(named: "default_note")! // Fallback image
         }
         return art
     }
 
     private func playPauseTapped() {
         guard let audioPlayer = audioPlayer else { return }
+        guard nowPlaying != "No track loaded" else { return }
 
         if audioPlayer.isPlaying {
             audioPlayer.pause()
@@ -353,7 +357,7 @@ struct MusicPlayerView: View {
         }
     }
 
-    private func setupNowPlayingInfo() {
+    private func setupNowPlayingInfo(clear: Bool = false) {
         guard let player = audioPlayer else { return }
 
         let nowPlayingInfo: [String: Any] = [
@@ -361,24 +365,22 @@ struct MusicPlayerView: View {
             MPMediaItemPropertyPlaybackDuration: player.duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
-            MPMediaItemPropertyArtwork: playlists[selectedPlaylist].songs[currentTrackIndex].backgroundPlayerArtwork!
+            MPMediaItemPropertyArtwork: playlists[selectedPlaylist].songs[currentTrackIndex].backgroundPlayerArtwork ?? MPMediaItemArtwork(boundsSize: UIImage(named: "AppIcon")!.size) { _ in UIImage(named: "AppIcon")!}
         ]
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = clear ? nil : nowPlayingInfo
     }
 
     private func setupRemoteCommands() {
         let commandCenter = MPRemoteCommandCenter.shared()
         
         commandCenter.playCommand.addTarget { _ in
-            self.audioPlayer?.play()
-            self.isPlaying = true
+            self.playPauseTapped()
             self.setupNowPlayingInfo()
             return .success
         }
         
         commandCenter.pauseCommand.addTarget { _ in
-            self.audioPlayer?.pause()
-            self.isPlaying = false
+            self.playPauseTapped()
             self.setupNowPlayingInfo()
             return .success
         }

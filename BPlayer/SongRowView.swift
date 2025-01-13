@@ -9,7 +9,7 @@ struct SongRowView: View {
     var body: some View {
         HStack {
             HStack{
-                Image(uiImage: song.trackAlbumCover)
+                Image(uiImage: song.trackAlbumCover ?? UIImage(named: "default_note")!)
                     .resizable()
                     .frame(width: 30, height: 30)
 
