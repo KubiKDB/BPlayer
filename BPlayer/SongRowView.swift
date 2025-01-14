@@ -15,6 +15,7 @@ struct SongRowView: View {
 
                 Text(song.trackName.replacingOccurrences(of: ".mp3", with: ""))
                     .foregroundColor(.white)
+                    .lineLimit(3)
             }.onTapGesture(perform: onSelect)
             
 

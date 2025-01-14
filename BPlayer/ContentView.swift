@@ -14,6 +14,7 @@ struct MusicPlayerView: View {
     @State private var isShuffling = false
     @State private var isRepeating = false
     @AppStorage("selectedPlaylist") private var selectedPlaylist: Int = 0
+    @State var scrollText: Bool = false
     
     @State private var playlists: [Playlist] = [
         Playlist(id: 0, name: "All songs"),
@@ -29,12 +30,14 @@ struct MusicPlayerView: View {
     }
     
     struct Song: Comparable, Hashable {
+        let hash_id: String
         var trackName:String
         var trackAlbumCover:UIImage?
         var backgroundPlayerArtwork: MPMediaItemArtwork?
         var isFavourited:Bool = false
 
-        init(trackName: String, trackAlbumCover: UIImage?) {
+        init(hash_id: String,trackName: String, trackAlbumCover: UIImage?) {
+            self.hash_id = hash_id
             self.trackName = trackName
             self.trackAlbumCover = trackAlbumCover
             if trackAlbumCover != nil {
@@ -81,9 +84,8 @@ struct MusicPlayerView: View {
                         song: song,
                         isFavorite: song.isFavourited,
                         onFavoriteToggle: {
-                            //TODO: potential bug
                             playlists[selectedPlaylist].songs[index].isFavourited.toggle()
-                            UserDefaults.standard.set(song.isFavourited, forKey: song.trackName)
+                            UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: song.hash_id)
                         },
                         onSelect: {
                             isRepeating = false
@@ -101,19 +103,19 @@ struct MusicPlayerView: View {
                 
                 Text(nowPlaying)
                     .font(.title2)
+                    .lineLimit(1)
                     .multilineTextAlignment(.center)
                     .padding()
                     .foregroundColor(.white)
                 
-                Spacer()
-
-                VStack(spacing: 8) {
-                    Slider(value: $currentTime, in: 0...trackDuration, onEditingChanged: slideTrackbar).accentColor(.white)
+                VStack(spacing: 5) {
+                    CustomSlider(value: $currentTime, range: 0...trackDuration, onEditing: slideTrackbar)
+                        .padding(.horizontal, 5)
                     HStack {
-                        Text(formatTime(currentTime))
+                        Text(Helper.formatTime(currentTime))
                             .foregroundColor(.white)
                         Spacer()
-                        Text(formatTime(trackDuration))
+                        Text(Helper.formatTime(trackDuration))
                             .foregroundColor(.white)
                     }
                 }
@@ -140,7 +142,7 @@ struct MusicPlayerView: View {
         .background(Color(.black)
         .edgesIgnoringSafeArea(.all))
         .onAppear{
-            configureAudioSession()
+            Helper.configureAudioSession()
             setupRemoteCommands()
             loadTracksFromDirectory()
             playlists[selectedPlaylist].songs.sort()
@@ -152,43 +154,26 @@ struct MusicPlayerView: View {
         }
     }
     
-    func listFilesInDirectory(directoryName: URL) -> [String]{
-        do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryName, includingPropertiesForKeys: nil)
-            
-            var list:[String] = []
-            for fileURL in fileURLs {
-                list.append(fileURL.lastPathComponent)
-            }
-            return list
-        } catch {
-            print("Error reading contents of directory: \(error)")
-            return []
-        }
-    }
-    
     private func loadTracksFromDirectory(){
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let customDirectory = documentsURL.appendingPathComponent("Music")
-                
         if !fileManager.fileExists(atPath: customDirectory.path) {
             do {
                 try fileManager.createDirectory(at: customDirectory, withIntermediateDirectories: true, attributes: nil)
-                print("Dir path: \(customDirectory.path)")
             } catch {
                 print("Error creating custom directory: \(error)")
             }
         }
         directoryPath = customDirectory.path()
-        let files = listFilesInDirectory(directoryName: customDirectory)
+        let files = Helper.listFilesInDirectory(directoryName: customDirectory)
         for file in files {
-            let is_favourited = UserDefaults.standard.bool(forKey: file)
+            let file_url = URL(filePath: (directoryPath as NSString).appendingPathComponent(file))
             
-            let artwork = fetchAlbumArtwork(from: URL(filePath: (directoryPath as NSString).appendingPathComponent(file)))
+            let artwork = Helper.fetchAlbumArtwork(from: file_url)
             
-            var song:Song = Song(trackName: file, trackAlbumCover: artwork)
-            song.isFavourited = is_favourited
+            var song:Song = Song(hash_id: Helper.generateFileHash(fileURL: file_url),trackName: file, trackAlbumCover: artwork)
+            song.isFavourited = UserDefaults.standard.bool(forKey: song.hash_id)
             
             playlists[0].songs.append(song)
             if song.isFavourited{
@@ -255,20 +240,6 @@ struct MusicPlayerView: View {
         }
         return nil
     }
-    
-    
-    //TODO: replace deprecation
-    private func fetchAlbumArtwork(from url: URL) -> UIImage? {
-        let asset = AVAsset(url: url)
-        let metadata = asset.commonMetadata
-        var art:UIImage? = nil
-        if let artworkItem = metadata.first(where: { $0.commonKey == .commonKeyArtwork }),
-        let artworkData = artworkItem.dataValue,
-        let image = UIImage(data: artworkData) {
-            art = image
-        }
-        return art
-    }
 
     private func playPauseTapped() {
         guard let audioPlayer = audioPlayer else { return }
@@ -334,21 +305,7 @@ struct MusicPlayerView: View {
         }
     }
 
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
     
-    private func configureAudioSession() {
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .default, options: [])
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set up audio session: \(error.localizedDescription)")
-        }
-    }
     
     private func checkForTrackEnd() {
         guard let player = audioPlayer else { return }
