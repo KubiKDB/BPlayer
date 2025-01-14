@@ -60,14 +60,6 @@ public struct Helper {
         }
         return art
     }
-    
-    public static func textSize(for text: String, font: Font) -> CGSize {
-            let label = UILabel()
-            label.text = text
-            label.font = UIFont.preferredFont(forTextStyle: .body)
-            label.sizeToFit()
-            return label.frame.size
-    }
 }
 
 

@@ -60,70 +60,72 @@ struct MusicPlayerView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack{
-                Text(playlists[selectedPlaylist].name)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 10)
-                    .foregroundColor(.white)
-                
-                Spacer()
-
-                PlaylistMenuView(
+            VStack(spacing: 0) {
+                HStack{
+                    Text(playlists[selectedPlaylist].name)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 10)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    PlaylistMenuView(
                         playlists: $playlists,
                         onSelectPlaylist: selectPlaylist,
                         createPlaylist: createPlaylist
-                )
-            }.padding(.bottom, 5)
-            
-            
-            List(playlists[selectedPlaylist].songs, id: \.self) { song in
-                if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
-                    SongRowView(
-                        song: song,
-                        isFavorite: song.isFavourited,
-                        onFavoriteToggle: {
-                            playlists[selectedPlaylist].songs[index].isFavourited.toggle()
-                            UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: song.hash_id)
-                        },
-                        onSelect: {
-                            isRepeating = false
-                            currentTrackIndex = index
-                            playTrack(at: index)
-                        }
                     )
                 }
-            }
-            .padding(.top, 1)
-
-            
-            VStack() {
-                Spacer()
+                .padding(.bottom, 5)
                 
-                Text(nowPlaying)
-                    .font(.title2)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .foregroundColor(.white)
                 
-                VStack(spacing: 5) {
-                    CustomSlider(value: $currentTime, range: 0...trackDuration, onEditing: slideTrackbar)
-                        .padding(.horizontal, 5)
-                    HStack {
-                        Text(Helper.formatTime(currentTime))
-                            .foregroundColor(.white)
-                        Spacer()
-                        Text(Helper.formatTime(trackDuration))
-                            .foregroundColor(.white)
+                List(playlists[selectedPlaylist].songs, id: \.self) { song in
+                    if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
+                        SongRowView(
+                            song: song,
+                            isFavorite: song.isFavourited,
+                            onFavoriteToggle: {
+                                playlists[selectedPlaylist].songs[index].isFavourited.toggle()
+                                UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: song.hash_id)
+                            },
+                            onSelect: {
+                                isRepeating = false
+                                currentTrackIndex = index
+                                playTrack(at: index)
+                            }
+                        )
                     }
                 }
-                .padding()
+                .background(Color(.black)
+                    .edgesIgnoringSafeArea(.all))
+                .padding(.top, 1)
                 
-                Spacer()
                 
-                PlaybackControlsView(
+                VStack() {
+                    Text(nowPlaying)
+                        .font(.title2)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 10)
+                        .padding()
+                        .foregroundColor(.white)
+                    
+                    VStack(spacing: 5) {
+                        CustomSlider(value: $currentTime, range: 0...trackDuration, onEditing: slideTrackbar)
+                            .padding(.horizontal, 5)
+                        HStack {
+                            Text(Helper.formatTime(currentTime))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Text(Helper.formatTime(trackDuration))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding()
+                    
+                    Spacer()
+                    
+                    PlaybackControlsView(
                         isPlaying: $isPlaying,
                         isShuffling: $isShuffling,
                         isRepeating: $isRepeating,
@@ -132,26 +134,27 @@ struct MusicPlayerView: View {
                         onPrevious: previous,
                         onShuffle: shuffle,
                         onRepeat: repeatTapped
-                )
-
-                Spacer()
+                    )
+                    
+                    Spacer()
+                }
+                .frame(height: 250)
+                .background(Color(red: 0.2, green: 0.2, blue: 0.2))
             }
-            .frame(height: 250)
-            .background(Color(.darkGray))
-        }
-        .background(Color(.black)
-        .edgesIgnoringSafeArea(.all))
-        .onAppear{
-            Helper.configureAudioSession()
-            setupRemoteCommands()
-            loadTracksFromDirectory()
-            playlists[selectedPlaylist].songs.sort()
-        }
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-            guard let player = audioPlayer, player.isPlaying else { return }
-            currentTime = player.currentTime
-            checkForTrackEnd()
-        }
+            .padding(.horizontal,7)
+            .background(Color(red: 0.2, green: 0.2, blue: 0.2)
+                .edgesIgnoringSafeArea(.all))
+            .onAppear{
+                Helper.configureAudioSession()
+                setupRemoteCommands()
+                loadTracksFromDirectory()
+                playlists[selectedPlaylist].songs.sort()
+            }
+            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+                guard let player = audioPlayer, player.isPlaying else { return }
+                currentTime = player.currentTime
+                checkForTrackEnd()
+            }
     }
     
     private func loadTracksFromDirectory(){
@@ -243,7 +246,6 @@ struct MusicPlayerView: View {
 
     private func playPauseTapped() {
         guard let audioPlayer = audioPlayer else { return }
-        guard nowPlaying != "No track loaded" else { return }
 
         if audioPlayer.isPlaying {
             audioPlayer.pause()

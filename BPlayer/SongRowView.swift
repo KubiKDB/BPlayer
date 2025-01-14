@@ -15,12 +15,15 @@ struct SongRowView: View {
 
                 Text(song.trackName.replacingOccurrences(of: ".mp3", with: ""))
                     .foregroundColor(.white)
-                    .lineLimit(3)
-            }.onTapGesture(perform: onSelect)
-            
+                    .lineLimit(1)
+                
+                Spacer()
 
-            Spacer()
-
+            }
+            .frame(height: 30)
+            .background(Color.white.opacity(0.0001))
+            .onTapGesture(perform: onSelect)
+    
             Button(action: onFavoriteToggle) {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
                     .resizable()
