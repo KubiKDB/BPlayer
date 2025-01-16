@@ -16,9 +16,14 @@ struct PlaylistMenuView: View {
                 Label("New Playlist", systemImage: "plus")
             }
         } label: {
-            Label("Playlists", systemImage: "line.3.horizontal")
-                .font(.headline)
-                .padding(.horizontal, 10)
+            Image(systemName: "line.3.horizontal")
+                .resizable()
+                .foregroundStyle(Color.blue)
+                .frame(width: 25,height: 20) 
+                .padding(.horizontal ,10)
+//            Label("Playlists", systemImage: "line.3.horizontal")
+//                .font(.headline)
+//                .padding(.horizontal, 10)
         }
     }
 }

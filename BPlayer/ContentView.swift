@@ -15,6 +15,7 @@ struct MusicPlayerView: View {
     @State private var isRepeating = false
     @AppStorage("selectedPlaylist") private var selectedPlaylist: Int = 0
     @State var scrollText: Bool = false
+    @State private var showPicker = false
     
     @State private var playlists: [Playlist] = [
         Playlist(id: 0, name: "All songs"),
@@ -69,6 +70,35 @@ struct MusicPlayerView: View {
                         .foregroundColor(.white)
                     
                     Spacer()
+                    
+                    Button(action: {
+                         showPicker = true
+                    }){
+                        Image(systemName: "folder")
+                            .resizable()
+                            .foregroundStyle(Color.blue)
+                            .frame(width: 25,height: 20)
+                            .padding(.horizontal ,10)
+                            
+                    }
+                    .sheet(isPresented: $showPicker) {
+                        FilePicker { urls in
+                            do {
+                                try Helper.importFiles(from: urls, toDirectory: .documentDirectory, subdirectory: "Music")
+                                DispatchQueue.main.async {
+                                    for i in 0..<playlists.count{
+                                        playlists[i].songs = []
+                                    }
+                                    loadTracksFromDirectory()
+                                    playlists[selectedPlaylist].songs.sort()
+                                }
+                                
+                            }
+                            catch {
+                                print("Error importing file: \(error.localizedDescription)")
+                            }
+                        }
+                    }
                     
                     PlaylistMenuView(
                         playlists: $playlists,

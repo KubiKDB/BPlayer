@@ -60,6 +60,37 @@ public struct Helper {
         }
         return art
     }
+    
+    public static func importFiles(from urls: [URL], toDirectory directory: FileManager.SearchPathDirectory = .documentDirectory, subdirectory: String = "Music") throws {
+        let fileManager = FileManager.default
+        let baseDirectory = try fileManager.url(for: directory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let destinationDirectory = baseDirectory.appendingPathComponent(subdirectory)
+
+        if !fileManager.fileExists(atPath: destinationDirectory.path) {
+            try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true, attributes: nil)
+        }
+
+        var importedURLs: [URL] = []
+
+        for url in urls {
+            let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+            defer { if shouldStopAccessing { url.stopAccessingSecurityScopedResource() } }
+
+            let destinationURL = destinationDirectory.appendingPathComponent(url.lastPathComponent)
+
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                print("File already exists: \(destinationURL.path)")
+                continue
+            }
+
+            do {
+                try fileManager.copyItem(at: url, to: destinationURL)
+                importedURLs.append(destinationURL)
+            } catch {
+                print("Failed to copy \(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 
