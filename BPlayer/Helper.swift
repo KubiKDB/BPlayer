@@ -12,6 +12,7 @@ public struct Helper {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
+    ///Hashing file content to use as key for UserDefaults
     public static func generateFileHash(fileURL: URL) -> String {
         do {
             let fileData = try Data(contentsOf: fileURL)
@@ -23,6 +24,7 @@ public struct Helper {
         }
     }
     
+    ///Getting list of files from "Documents/Music"
     public static func listFilesInDirectory(directoryName: URL) -> [String]{
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(at: directoryName, includingPropertiesForKeys: nil)
@@ -48,6 +50,8 @@ public struct Helper {
         }
     }
     
+    
+    ///Getting image from file's metadata
     //TODO: replace deprecation
     public static func fetchAlbumArtwork(from url: URL) -> UIImage? {
         let asset = AVAsset(url: url)
@@ -61,6 +65,8 @@ public struct Helper {
         return art
     }
     
+    
+    ///Copying selected files to internal directory
     public static func importFiles(from urls: [URL], toDirectory directory: FileManager.SearchPathDirectory = .documentDirectory, subdirectory: String = "Music") throws {
         let fileManager = FileManager.default
         let baseDirectory = try fileManager.url(for: directory, in: .userDomainMask, appropriateFor: nil, create: true)

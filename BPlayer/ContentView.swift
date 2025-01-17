@@ -14,22 +14,29 @@ struct MusicPlayerView: View {
     @State private var isShuffling = false
     @State private var isRepeating = false
     @AppStorage("selectedPlaylist") private var selectedPlaylist: Int = 0
+    @AppStorage("nextPlaylistID") private var nextPlaylistID = 2
     @State var scrollText: Bool = false
     @State private var showPicker = false
+    @State private var showAlert = false
+    @State private var userInput: String = ""
+    
     
     @State private var playlists: [Playlist] = [
         Playlist(id: 0, name: "All songs"),
         Playlist(id: 1, name: "Favorite")
     ]
+    //["name":hash_id] for key "{playlist.id}"
     
     
-
+    //Holds "Song" objects
     struct Playlist: Identifiable, Hashable {
         let id:Int
         var name: String
         var songs: [Song] = []
     }
     
+    
+    ///Contains name, image, favourited state and hash for saving information using UserDefaults
     struct Song: Comparable, Hashable {
         let hash_id: String
         var trackName:String
@@ -51,24 +58,52 @@ struct MusicPlayerView: View {
         }
     }
     
+    private func savePlaylists(){
+        for i in 2..<playlists.count {
+            var list:[String] = []
+            for song in playlists[0].songs {
+                if playlists[i].songs.contains(song) {
+                    list.append(song.hash_id)
+                }
+            }
+            let out = [playlists[i].name : list]
+            UserDefaults.standard.set(out, forKey: "\(playlists[i].id)")
+            _ = 0
+        }
+    }
+    
     private func createID() -> Int{
-        return playlists.count
+        let rv = nextPlaylistID
+        nextPlaylistID += 1
+        return rv
+    }
+    
+    private func getInput(){
+        showAlert = true
     }
     
     private func createPlaylist() {
-        //TODO: create playlists
-        print("Created playlist")
+        //TODO: save playlists
+        playlists.append(Playlist(id: createID(), name: userInput))
+        userInput = ""
+        savePlaylists()
+    }
+    
+    private func addToPlaylist(index: Int) {
+        playlists[index].songs.append(playlists[selectedPlaylist].songs[currentTrackIndex])
+        savePlaylists()
     }
     
     var body: some View {
             VStack(spacing: 0) {
                 HStack{
-                    Text(playlists[selectedPlaylist].name)
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 10)
-                        .foregroundColor(.white)
-                    
+                    if selectedPlaylist < playlists.count {
+                        Text(playlists[selectedPlaylist].name)
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 10)
+                            .foregroundColor(.white)
+                    }
                     Spacer()
                     
                     Button(action: {
@@ -103,42 +138,73 @@ struct MusicPlayerView: View {
                     PlaylistMenuView(
                         playlists: $playlists,
                         onSelectPlaylist: selectPlaylist,
-                        createPlaylist: createPlaylist
+                        createPlaylist: getInput,
+                        isAbleToCreate: true
                     )
                 }
                 .padding(.bottom, 5)
                 
-                
-                List(playlists[selectedPlaylist].songs, id: \.self) { song in
-                    if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
-                        SongRowView(
-                            song: song,
-                            isFavorite: song.isFavourited,
-                            onFavoriteToggle: {
-                                playlists[selectedPlaylist].songs[index].isFavourited.toggle()
-                                UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: song.hash_id)
-                            },
-                            onSelect: {
-                                isRepeating = false
-                                currentTrackIndex = index
-                                playTrack(at: index)
-                            }
-                        )
+                if selectedPlaylist < playlists.count{
+                    List(playlists[selectedPlaylist].songs, id: \.self) { song in
+                        if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
+                            SongRowView(
+                                song: song,
+                                isFavorite: song.isFavourited,
+                                onFavoriteToggle: {
+                                    playlists[selectedPlaylist].songs[index].isFavourited.toggle()
+                                    UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: song.hash_id)
+                                },
+                                onSelect: {
+                                    isRepeating = false
+                                    currentTrackIndex = index
+                                    playTrack(at: index)
+                                }
+                            )
+                        }
                     }
+                    .background(Color(.black)
+                        .edgesIgnoringSafeArea(.all))
+                    .padding(.top, 1)
+                    
                 }
-                .background(Color(.black)
-                    .edgesIgnoringSafeArea(.all))
-                .padding(.top, 1)
-                
                 
                 VStack() {
-                    Text(nowPlaying)
-                        .font(.title2)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 10)
-                        .padding()
-                        .foregroundColor(.white)
+                    
+                    HStack {
+                        Text(nowPlaying)
+                            .font(.title2)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 10)
+                            .padding()
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+//                        if nowPlaying != "No track loaded" && nowPlaying != "No MP3 files found" {
+                            PlaylistMenuView(
+                                playlists: $playlists,
+                                onSelectPlaylist: addToPlaylist,
+                                createPlaylist: createPlaylist,
+                                isAbleToCreate: false
+                            )
+                            .padding(.top, 10)
+                            .opacity(audioPlayer?.duration ?? 0 > 0 ? 1 : 0)
+//                        }
+                        
+                            .textInputAlert(
+                            isPresented: $showAlert,
+                            text: $userInput,
+                            title: "Create Playlist",
+                            message: "Enter playlist name:",
+                            placeholder: "Playlist",
+                            onSubmit: {
+                                createPlaylist()
+                            }
+                            )
+                        
+                    }
+                    .padding(.horizontal)
                     
                     VStack(spacing: 5) {
                         CustomSlider(value: $currentTime, range: 0...trackDuration, onEditing: slideTrackbar)
@@ -186,7 +252,7 @@ struct MusicPlayerView: View {
                 checkForTrackEnd()
             }
     }
-    
+    ///Creates "Song" objects based on .mp3 files and puts them in "Playlist" objects
     private func loadTracksFromDirectory(){
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -213,6 +279,24 @@ struct MusicPlayerView: View {
                 playlists[1].songs.append(song)
             }
         }
+        for i in 2..<nextPlaylistID {
+            let dict = UserDefaults.standard.dictionary(forKey: "\(i)") as? [String:[String]]
+            guard let name = dict?.keys.first else {
+                continue
+            }
+            var pl = Playlist(id: i, name: name)
+            guard let songs = dict?[name] else {
+                playlists.append(pl)
+                continue
+            }
+            for song in playlists[0].songs {
+                if songs.contains(song.hash_id){
+                    pl.songs.append(song)
+                }
+            }
+            playlists.append(pl)
+
+        }
         selectPlaylist(index: selectedPlaylist)
         
         if playlists[0].songs.isEmpty {
@@ -220,6 +304,7 @@ struct MusicPlayerView: View {
         }
     }
     
+    ///Loads "Song" objects into current "Playlist" object
     private func selectPlaylist(index: Int){
         if index != selectedPlaylist {
             playlists[1].songs = []
@@ -243,7 +328,7 @@ struct MusicPlayerView: View {
             setupNowPlayingInfo(clear: true)
         }
     }
-
+    
     private func playTrack(at index: Int) {
         let trackName = playlists[selectedPlaylist].songs[index].trackName
 
@@ -348,14 +433,17 @@ struct MusicPlayerView: View {
 
     private func setupNowPlayingInfo(clear: Bool = false) {
         guard let player = audioPlayer else { return }
-
-        let nowPlayingInfo: [String: Any] = [
-            MPMediaItemPropertyTitle: nowPlaying,
-            MPMediaItemPropertyPlaybackDuration: player.duration,
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
-            MPMediaItemPropertyArtwork: playlists[selectedPlaylist].songs[currentTrackIndex].backgroundPlayerArtwork ?? MPMediaItemArtwork(boundsSize: UIImage(named: "AppIcon")!.size) { _ in UIImage(named: "AppIcon")!}
-        ]
+        var nowPlayingInfo: [String: Any] = [:]
+        
+        if !clear {
+            nowPlayingInfo = [
+                MPMediaItemPropertyTitle: nowPlaying,
+                MPMediaItemPropertyPlaybackDuration: player.duration,
+                MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime,
+                MPNowPlayingInfoPropertyPlaybackRate: player.isPlaying ? 1.0 : 0.0,
+                MPMediaItemPropertyArtwork: playlists[selectedPlaylist].songs[currentTrackIndex].backgroundPlayerArtwork ?? MPMediaItemArtwork(boundsSize: UIImage(named: "AppIcon")!.size) { _ in UIImage(named: "AppIcon")!}
+            ]
+        }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = clear ? nil : nowPlayingInfo
     }
 
