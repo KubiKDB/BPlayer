@@ -84,22 +84,74 @@ struct MusicPlayerView: View {
     
     private func createPlaylist() {
         //TODO: save playlists
+        for playlist in playlists {
+            if playlist.name == userInput {
+                userInput = ""
+                print("This playlist already exists")
+                return
+            }
+        }
         playlists.append(Playlist(id: createID(), name: userInput))
         userInput = ""
         savePlaylists()
     }
     
-    private func addToPlaylist(index: Int) {
-        playlists[index].songs.append(playlists[selectedPlaylist].songs[currentTrackIndex])
+    private func addToPlaylist(index: Int, selectedSong: Int) {
+        if !playlists[index].songs.contains(playlists[selectedPlaylist].songs[selectedSong]){
+            playlists[index].songs.append(playlists[selectedPlaylist].songs[selectedSong])
+            savePlaylists()
+        }
+        else {
+            print("This song already added")
+        }
+    }
+    
+    private func removeFromPlaylist(index: Int){
+        if selectedPlaylist == 1 {
+            playlists[selectedPlaylist].songs[index].isFavourited.toggle()
+            UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: playlists[selectedPlaylist].songs[index].hash_id)
+        } else {
+            playlists[selectedPlaylist].songs.remove(at: index)
+            savePlaylists()
+        }
+    }
+    
+    private func deletePlaylist(index: Int){
+        if selectedPlaylist >= index {
+            selectPlaylist(index: selectedPlaylist - 1)
+        }
+        playlists.remove(at: index)
         savePlaylists()
     }
+    
+    func deleteFile(index: Int) {
+        let fileManager = FileManager.default
+
+        let fileURL = URL(filePath: (directoryPath as NSString).appendingPathComponent(playlists[selectedPlaylist].songs[index].trackName))
+
+            if fileManager.fileExists(atPath: fileURL.path) {
+                do {
+                    try fileManager.removeItem(at: fileURL)
+                    reloadSongs()
+                    print("File deleted successfully.")
+                } catch {
+                    print("Error deleting file: \(error)")
+                }
+            } else {
+                print("File does not exist.")
+            }
+    }
+
+    
     
     var body: some View {
             VStack(spacing: 0) {
                 HStack{
+                    Spacer()
                     if selectedPlaylist < playlists.count {
                         Text(playlists[selectedPlaylist].name)
                             .font(.headline)
+                            .lineLimit(1)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 10)
                             .foregroundColor(.white)
@@ -121,10 +173,7 @@ struct MusicPlayerView: View {
                             do {
                                 try Helper.importFiles(from: urls, toDirectory: .documentDirectory, subdirectory: "Music")
                                 DispatchQueue.main.async {
-                                    for i in 0..<playlists.count{
-                                        playlists[i].songs = []
-                                    }
-                                    loadTracksFromDirectory()
+                                    reloadSongs()
                                     playlists[selectedPlaylist].songs.sort()
                                 }
                                 
@@ -139,7 +188,8 @@ struct MusicPlayerView: View {
                         playlists: $playlists,
                         onSelectPlaylist: selectPlaylist,
                         createPlaylist: getInput,
-                        isAbleToCreate: true
+                        isAbleToCreate: true,
+                        deletePlaylist: deletePlaylist
                     )
                 }
                 .padding(.bottom, 5)
@@ -148,6 +198,8 @@ struct MusicPlayerView: View {
                     List(playlists[selectedPlaylist].songs, id: \.self) { song in
                         if let index = playlists[selectedPlaylist].songs.firstIndex(of: song) {
                             SongRowView(
+                                playlists: $playlists,
+                                id: index,
                                 song: song,
                                 isFavorite: song.isFavourited,
                                 onFavoriteToggle: {
@@ -158,7 +210,14 @@ struct MusicPlayerView: View {
                                     isRepeating = false
                                     currentTrackIndex = index
                                     playTrack(at: index)
-                                }
+                                },
+                                removeFromPlaylist: {
+                                    removeFromPlaylist(index: index)
+                                },
+                                deleteSong: {
+                                    deleteFile(index: index)
+                                },
+                                addToPlaylist: addToPlaylist
                             )
                         }
                     }
@@ -180,17 +239,6 @@ struct MusicPlayerView: View {
                             .foregroundColor(.white)
                         
                         Spacer()
-                        
-//                        if nowPlaying != "No track loaded" && nowPlaying != "No MP3 files found" {
-                            PlaylistMenuView(
-                                playlists: $playlists,
-                                onSelectPlaylist: addToPlaylist,
-                                createPlaylist: createPlaylist,
-                                isAbleToCreate: false
-                            )
-                            .padding(.top, 10)
-                            .opacity(audioPlayer?.duration ?? 0 > 0 ? 1 : 0)
-//                        }
                         
                             .textInputAlert(
                             isPresented: $showAlert,
@@ -252,6 +300,38 @@ struct MusicPlayerView: View {
                 checkForTrackEnd()
             }
     }
+    
+    private func reloadSongs(){
+        playlists[0].songs = []
+        playlists[1].songs = []
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let customDirectory = documentsURL.appendingPathComponent("Music")
+        if !fileManager.fileExists(atPath: customDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: customDirectory, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                print("Error creating custom directory: \(error)")
+            }
+        }
+        directoryPath = customDirectory.path()
+        let files = Helper.listFilesInDirectory(directoryName: customDirectory)
+        for file in files {
+            let file_url = URL(filePath: (directoryPath as NSString).appendingPathComponent(file))
+            
+            let artwork = Helper.fetchAlbumArtwork(from: file_url)
+            
+            var song:Song = Song(hash_id: Helper.generateFileHash(fileURL: file_url),trackName: file, trackAlbumCover: artwork)
+            song.isFavourited = UserDefaults.standard.bool(forKey: song.hash_id)
+            
+            playlists[0].songs.append(song)
+            if song.isFavourited{
+                playlists[1].songs.append(song)
+            }
+        }
+        playlists[selectedPlaylist].songs.sort()
+    }
+    
     ///Creates "Song" objects based on .mp3 files and puts them in "Playlist" objects
     private func loadTracksFromDirectory(){
         let fileManager = FileManager.default
@@ -300,7 +380,7 @@ struct MusicPlayerView: View {
         selectPlaylist(index: selectedPlaylist)
         
         if playlists[0].songs.isEmpty {
-            nowPlaying = "No MP3 files found"
+//            nowPlaying = "No MP3 files found"
         }
     }
     
