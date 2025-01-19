@@ -18,6 +18,7 @@ struct MusicPlayerView: View {
     @State var scrollText: Bool = false
     @State private var showPicker = false
     @State private var showAlert = false
+    @State private var showDialog = false
     @State private var userInput: String = ""
     
     
@@ -120,6 +121,7 @@ struct MusicPlayerView: View {
         if selectedPlaylist >= index {
             selectPlaylist(index: selectedPlaylist - 1)
         }
+        UserDefaults.standard.removeObject(forKey: "\(playlists[index].id)")
         playlists.remove(at: index)
         savePlaylists()
     }
@@ -149,12 +151,26 @@ struct MusicPlayerView: View {
                 HStack{
                     Spacer()
                     if selectedPlaylist < playlists.count {
-                        Text(playlists[selectedPlaylist].name)
+                        Menu {
+                                if selectedPlaylist >= 2 {
+                                    Button(role: .destructive) {
+                                        showDialog = true
+                                    } label: {
+                                        Label("Delete playlist", systemImage: "trash")
+                                    }
+                                }
+                        } label: {
+                            Label(playlists[selectedPlaylist].name, systemImage: selectedPlaylist >= 2 ? "ellipsis.circle": "")
+                        }
                             .font(.headline)
                             .lineLimit(1)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 10)
                             .foregroundColor(.white)
+                            .confirmationDialog("Choose an action", isPresented: $showDialog, titleVisibility: .visible) {
+                                Button("Delete") { deletePlaylist(index: selectedPlaylist)}
+                                Button("Cancel", role: .cancel) { }
+                            }
                     }
                     Spacer()
                     

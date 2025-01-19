@@ -57,7 +57,9 @@ struct SongRowView: View {
             Button(action: removeFromPlaylist) {
                 Label("Remove from playlist", systemImage: "minus")
             }
-            Button(action: {showDialog = true}) {
+            Button(role: .destructive) {
+                showDialog = true
+            } label: {
                 Label("Delete song", systemImage: "trash")
             }
             

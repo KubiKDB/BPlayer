@@ -11,23 +11,9 @@ struct PlaylistMenuView: View {
         Menu {
             ForEach(playlists.indices, id: \.self) { index in
                 if isAbleToCreate || (index != 0 && index != 1) {
-                    Group {
-                        if index != 0 && index != 1 {
-                            Button("\(playlists[index].name): \(playlists[index].songs.count)") {
-                                onSelectPlaylist(index)
-                            }
-                            .contextMenu {
-                                Button(action: {deletePlaylist(index)}) {
-                                    Label("Delete playlist", systemImage: "trash")
-                                }
-                            }
-                        } else {
-                            Button("\(playlists[index].name): \(playlists[index].songs.count)") {
-                                onSelectPlaylist(index)
-                            }
-                        }
+                    Button("\(playlists[index].name): \(playlists[index].songs.count)") {
+                        onSelectPlaylist(index)
                     }
-
                 }
             }
             if isAbleToCreate {
@@ -42,5 +28,6 @@ struct PlaylistMenuView: View {
                 .frame(width: isAbleToCreate ? 25 : 20,height: 20) 
                 .padding(.horizontal ,10)
         }
+
     }
 }
