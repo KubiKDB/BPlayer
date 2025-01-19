@@ -92,7 +92,7 @@ struct MusicPlayerView: View {
                 return
             }
         }
-        playlists.append(Playlist(id: createID(), name: userInput))
+        playlists.append(Playlist(id: createID(), name: userInput.trimmingCharacters(in: .whitespacesAndNewlines)))
         userInput = ""
         savePlaylists()
     }
@@ -108,6 +108,7 @@ struct MusicPlayerView: View {
     }
     
     private func removeFromPlaylist(index: Int){
+        guard selectedPlaylist != 0 else { return }
         if selectedPlaylist == 1 {
             playlists[selectedPlaylist].songs[index].isFavourited.toggle()
             UserDefaults.standard.set(playlists[selectedPlaylist].songs[index].isFavourited, forKey: playlists[selectedPlaylist].songs[index].hash_id)

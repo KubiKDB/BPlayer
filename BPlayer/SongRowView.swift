@@ -45,7 +45,7 @@ struct SongRowView: View {
             Menu {
                 ForEach(playlists.indices, id: \.self) { index in
                     if (index != 0 && index != 1) {
-                        Button("\(playlists[index].name): \(playlists[index].songs.count)") {
+                        Button("\(playlists[index].name)") {
                             addToPlaylist(index, id)
                         }
                     }
