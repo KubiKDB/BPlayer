@@ -19,6 +19,7 @@ struct MusicPlayerView: View {
     @State private var showPicker = false
     @State private var showAlert = false
     @State private var showDialog = false
+    @State private var showSelection = false
     @State private var userInput: String = ""
     
     
@@ -107,6 +108,14 @@ struct MusicPlayerView: View {
         }
     }
     
+    private func addMultipleToPlaylist(playlistIndex: Int, selectedSong:Song){
+            if !playlists[playlistIndex].songs.contains(selectedSong){
+                playlists[playlistIndex].songs.append(selectedSong)
+            }
+        
+        savePlaylists()
+    }
+    
     private func removeFromPlaylist(index: Int){
         guard selectedPlaylist != 0 else { return }
         if selectedPlaylist == 1 {
@@ -154,6 +163,10 @@ struct MusicPlayerView: View {
                     if selectedPlaylist < playlists.count {
                         Menu {
                                 if selectedPlaylist >= 2 {
+                                    Button(action: {showSelection = true}){
+                                        Label("Add to playlist", systemImage: "plus")
+                                    }
+                                    Divider()
                                     Button(role: .destructive) {
                                         showDialog = true
                                     } label: {
@@ -162,6 +175,13 @@ struct MusicPlayerView: View {
                                 }
                         } label: {
                             Label(playlists[selectedPlaylist].name, systemImage: selectedPlaylist >= 2 ? "ellipsis.circle": "")
+                        }
+                        .sheet(isPresented: $showSelection) {
+                            SearchView(
+                                playlist: $playlists[selectedPlaylist],
+                                songs: $playlists[0].songs,
+                                playlist_id: selectedPlaylist,
+                                onSelect: addMultipleToPlaylist)
                         }
                             .font(.headline)
                             .lineLimit(1)

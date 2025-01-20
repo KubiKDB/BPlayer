@@ -17,6 +17,8 @@
 		3891F9AA2D31274400B31438 /* SongRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3891F9A92D31274400B31438 /* SongRowView.swift */; };
 		3891F9AC2D3128E400B31438 /* PlaylistMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3891F9AB2D3128E400B31438 /* PlaylistMenuView.swift */; };
 		38A254DA2D37FC6200A4B7E9 /* FileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A254D92D37FC6200A4B7E9 /* FileImporter.swift */; };
+		38A4FA462D3EBC3200FDDDC2 /* AddToPlaylistRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A4FA452D3EBC3200FDDDC2 /* AddToPlaylistRow.swift */; };
+		38A4FA482D3EBEDC00FDDDC2 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A4FA472D3EBEDC00FDDDC2 /* SearchView.swift */; };
 		38E156142D3A7257009F31B5 /* TextInputAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E156132D3A7257009F31B5 /* TextInputAlert.swift */; };
 /* End PBXBuildFile section */
 
@@ -33,6 +35,8 @@
 		3891F9A92D31274400B31438 /* SongRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongRowView.swift; sourceTree = "<group>"; };
 		3891F9AB2D3128E400B31438 /* PlaylistMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMenuView.swift; sourceTree = "<group>"; };
 		38A254D92D37FC6200A4B7E9 /* FileImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImporter.swift; sourceTree = "<group>"; };
+		38A4FA452D3EBC3200FDDDC2 /* AddToPlaylistRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistRow.swift; sourceTree = "<group>"; };
+		38A4FA472D3EBEDC00FDDDC2 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		38E156132D3A7257009F31B5 /* TextInputAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputAlert.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -78,6 +82,8 @@
 				3891F9A92D31274400B31438 /* SongRowView.swift */,
 				3891F9AB2D3128E400B31438 /* PlaylistMenuView.swift */,
 				38E156132D3A7257009F31B5 /* TextInputAlert.swift */,
+				38A4FA452D3EBC3200FDDDC2 /* AddToPlaylistRow.swift */,
+				38A4FA472D3EBEDC00FDDDC2 /* SearchView.swift */,
 			);
 			path = BPlayer;
 			sourceTree = "<group>";
@@ -169,6 +175,8 @@
 				385682F32D31253A00564714 /* PlaybackControlsView.swift in Sources */,
 				381206822D36A69000A70A05 /* Helper.swift in Sources */,
 				38A254DA2D37FC6200A4B7E9 /* FileImporter.swift in Sources */,
+				38A4FA462D3EBC3200FDDDC2 /* AddToPlaylistRow.swift in Sources */,
+				38A4FA482D3EBEDC00FDDDC2 /* SearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
