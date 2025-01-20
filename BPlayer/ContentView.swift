@@ -544,6 +544,7 @@ struct MusicPlayerView: View {
     private func checkForTrackEnd() {
         guard let player = audioPlayer else { return }
         if player.currentTime >= player.duration - 1{
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             nextOnEnd()
         }
     }
