@@ -101,7 +101,10 @@ struct MusicPlayerView: View {
     private func addToPlaylist(index: Int, selectedSong: Int) {
         if !playlists[index].songs.contains(playlists[selectedPlaylist].songs[selectedSong]){
             playlists[index].songs.append(playlists[selectedPlaylist].songs[selectedSong])
-            savePlaylists()
+            DispatchQueue.main.async {
+                savePlaylists()
+                reloadSongs()
+            }
         }
         else {
             print("This song already added")
@@ -109,11 +112,13 @@ struct MusicPlayerView: View {
     }
     
     private func addMultipleToPlaylist(playlistIndex: Int, selectedSong:Song){
-            if !playlists[playlistIndex].songs.contains(selectedSong){
-                playlists[playlistIndex].songs.append(selectedSong)
+        if !playlists[playlistIndex].songs.contains(selectedSong){
+            playlists[playlistIndex].songs.append(selectedSong)
+            DispatchQueue.main.async {
+                savePlaylists()
+                reloadSongs()
             }
-        
-        savePlaylists()
+        }
     }
     
     private func removeFromPlaylist(index: Int){
@@ -339,6 +344,9 @@ struct MusicPlayerView: View {
     }
     
     private func reloadSongs(){
+//        for i in 2..<playlists.count {
+//            playlists.remove(at: i)
+//        }
         playlists[0].songs = []
         playlists[1].songs = []
         let fileManager = FileManager.default
@@ -365,6 +373,26 @@ struct MusicPlayerView: View {
             if song.isFavourited{
                 playlists[1].songs.append(song)
             }
+        }
+        for i in 2..<nextPlaylistID {
+            playlists.removeAll { $0.id == i}
+
+            let dict = UserDefaults.standard.dictionary(forKey: "\(i)") as? [String:[String]]
+            guard let name = dict?.keys.first else {
+                continue
+            }
+            var pl = Playlist(id: i, name: name)
+            guard let songs = dict?[name] else {
+                playlists.append(pl)
+                continue
+            }
+            for song in playlists[0].songs {
+                if songs.contains(song.hash_id){
+                    pl.songs.append(song)
+                }
+            }
+            playlists.append(pl)
+
         }
         playlists[selectedPlaylist].songs.sort()
     }
